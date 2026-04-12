@@ -6,6 +6,8 @@ namespace Domain.Interface;
 
 public interface IUsuario
 {
+
+    Task CriarUsuarioAsync(UsuarioDTO usuarioDto);
     Task<UsuarioDTO> ObterUsuarioPorIdAsync(int id);
     Task<UsuarioDTO> AlterarSenhaAsync(int id,string senhaAtual, string novaSenha);
 

@@ -2,6 +2,6 @@ namespace Dominios.Enums;
 
 public enum Perfil
 {
-    Administrador,
+    Adm,
     Editor
 }
