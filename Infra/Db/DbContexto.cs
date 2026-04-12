@@ -1,3 +1,4 @@
+using Dominios.Entidades;
 using Microsoft.EntityFrameworkCore;
 
 namespace Infra.Db;
