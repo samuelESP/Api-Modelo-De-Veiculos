@@ -46,7 +46,7 @@ app.MapPost("/Usuario/Criar", async ([FromBody] LoginDto loginDto, IUsuario usua
 }).WithTags("Usuário");
 
 //obeter por ID
-app.MapGet("/Usuario/ObterPorId/{id}", async (int id, IUsuario usuarioService) =>
+app.MapGet("/Usuario/ObterPorId/{id}", async ([FromRoute]int id, IUsuario usuarioService) =>
 {
     var usuario = await usuarioService.ObterUsuarioPorIdAsync(id);
     if (usuario == null)
@@ -69,13 +69,37 @@ app.MapGet("/Usuario/Listar", async (IUsuario usuarioService) =>
 // ====================== Veiculos ======================
 #region  Veiculos
 
+//Listar Veiculos
 app.MapGet("/Veiculo/Listar", async (IVeiculo veiculoService) =>
 {
     var veiculos = await veiculoService.ListarVeiculosAsync();
     return Results.Ok(veiculos);
 }).WithTags("Veículo");
 
+//Listar Veiculo por ID
+app.MapGet("/Veiculo/ObterPorId/{id}", async ([FromRoute]int id, IVeiculo veiculoService) =>
+{
+    var veiculo = await veiculoService.ObterVeiculoPorIdAsync(id);
+    if (veiculo == null)
+    {
+        return Results.NotFound("Veículo não encontrado.");
+    }
+    return Results.Ok(veiculo);
+}).WithTags("Veículo");
+
+
+//Listar Veiculo por nome
+app.MapGet("/Veiculo/ObterPorNome", async ([FromQuery] string nome, IVeiculo veiculoService) =>
+{
+    var veiculo = await veiculoService.ObterVeiculoPorNomeAsync(nome);
+    if (veiculo == null)
+    {
+        return Results.NotFound("Veículo não encontrado.");
+    }
+    return Results.Ok(veiculo);
+}).WithTags("Veículo");
 #endregion
+
 app.UseSwagger();
 app.UseSwaggerUI();
 

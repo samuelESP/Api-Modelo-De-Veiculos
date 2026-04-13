@@ -6,6 +6,6 @@ public interface IVeiculo
 {
     
     Task <List<VeiculoDTO>> ListarVeiculosAsync();
-    //Task <VeiculoDTO> ObterVeiculoPorIdAsync(int id);
-    //Task <VeiculoDTO> ObterVeiculoPorNomeAsync(string nome);
+    Task <VeiculoDTO> ObterVeiculoPorIdAsync(int id);
+    Task <VeiculoDTO> ObterVeiculoPorNomeAsync(string nome);
 }
