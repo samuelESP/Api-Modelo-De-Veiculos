@@ -1,4 +1,4 @@
-using Domain.DTOs;
+using Domain.DTO;
 using Dominios.Entidades;
 
 namespace Domain.Interface;

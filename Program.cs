@@ -22,6 +22,7 @@ builder.Services.AddDbContext<DbContexto>(options =>
 
 
 builder.Services.AddScoped<IUsuario, UsuarioServico>();
+builder.Services.AddScoped<IVeiculo, VeiculoServico>();
 
 //Swagger
 builder.Services.AddEndpointsApiExplorer();
@@ -65,8 +66,16 @@ app.MapGet("/Usuario/Listar", async (IUsuario usuarioService) =>
 #endregion
 
 
+// ====================== Veiculos ======================
+#region  Veiculos
 
+app.MapGet("/Veiculo/Listar", async (IVeiculo veiculoService) =>
+{
+    var veiculos = await veiculoService.ListarVeiculosAsync();
+    return Results.Ok(veiculos);
+}).WithTags("Veículo");
 
+#endregion
 app.UseSwagger();
 app.UseSwaggerUI();
 

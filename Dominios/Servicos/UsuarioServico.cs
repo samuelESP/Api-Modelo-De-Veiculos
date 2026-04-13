@@ -17,7 +17,7 @@ public class UsuarioServico : IUsuario
         _context = context;
     }
 
-
+#region Usuario
 //Criar Usuário
     public async Task<IResult> CriarUsuarioAsync(LoginDto loginDto)
     {
@@ -77,4 +77,7 @@ public class UsuarioServico : IUsuario
             Perfil = Enum.Parse<Perfil>(u.Perfil) 
         }).ToList();
     }
+
+#endregion
+
 }
