@@ -7,11 +7,12 @@ namespace Domain.Interface;
 public interface IUsuario
 {
 
-    Task CriarUsuarioAsync(UsuarioDTO usuarioDto);
+    Task<IResult> CriarUsuarioAsync(LoginDto loginDto);
     Task<UsuarioDTO> ObterUsuarioPorIdAsync(int id);
-    Task<UsuarioDTO> AlterarSenhaAsync(int id,string senhaAtual, string novaSenha);
 
-    Task <List<VeiculoDTO>> ListarVeiculosAsync();
-    Task <VeiculoDTO> ObterVeiculoPorIdAsync(int id);
-    Task <VeiculoDTO> ObterVeiculoPorNomeAsync(string nome);
+    Task<List<UsuarioDTO>> ListarUsuariosAsync();
+
+   // Task <List<VeiculoDTO>> ListarVeiculosAsync();
+    //Task <VeiculoDTO> ObterVeiculoPorIdAsync(int id);
+    //Task <VeiculoDTO> ObterVeiculoPorNomeAsync(string nome);
 }
