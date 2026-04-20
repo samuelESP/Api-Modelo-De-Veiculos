@@ -2,7 +2,7 @@ using Domain.DTO;
 
 namespace Domain.Interface;
 
-public interface IAdministrador : IEditor
+public interface IAdministrador
 {
     Task GerenciarUsuariosAsync();
 

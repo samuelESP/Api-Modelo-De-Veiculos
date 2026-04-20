@@ -1,5 +1,7 @@
 using Domain.DTO;
 using Domain.Interface;
+using Domain.Models;
+using Dominios.Entidades;
 using Infra.Db;
 using Microsoft.EntityFrameworkCore;
 
@@ -13,6 +15,16 @@ public class VeiculoServico : IVeiculo
     public VeiculoServico(DbContexto context)
     {
         _context = context;
+    }
+
+    private async Task<Veiculo> BuscarEntidadePorIdAsync(int id)
+    {
+        var veiculo = await _context.Veiculos.FindAsync(id);
+        if (veiculo == null)
+        {
+            throw new KeyNotFoundException("Veículo não encontrado.");
+        }
+        return veiculo;
     }
 
 // Implementação do método para obter um veículo por ID
@@ -59,4 +71,59 @@ public class VeiculoServico : IVeiculo
             Ano = veiculo.Ano
         };
     }
+
+//Atualizar Veiculo
+    public async Task<VeiculoModel> AtualizarVeiculoAsync(int id, VeiculoModel veiculoModel)
+    {
+        var veiculo = await BuscarEntidadePorIdAsync(id);
+
+        veiculo.Marca = veiculoModel.Marca;
+        veiculo.Nome = veiculoModel.Nome;
+        veiculo.Ano = veiculoModel.Ano;
+
+        await _context.SaveChangesAsync();
+
+        return new VeiculoModel
+        {
+            Marca = veiculo.Marca,
+            Nome = veiculo.Nome,
+            Ano = veiculo.Ano
+        };
+        
+    }
+
+    public async Task CriarVeiculoAsync (VeiculoModel veiculoModel)
+    {
+
+        if (string.IsNullOrEmpty(veiculoModel.Marca) || string.IsNullOrEmpty(veiculoModel.Nome) || veiculoModel.Ano <= 1885)
+        {
+            throw new ArgumentException("Dados do veículo inválidos. Verifique marca, nome e ano.");
+        }
+
+        var veiculo = new Veiculo
+        {
+            Marca = veiculoModel.Marca,
+            Nome = veiculoModel.Nome,
+            Ano = veiculoModel.Ano
+        };
+
+        _context.Veiculos.Add(veiculo);
+        await _context.SaveChangesAsync();
+
+    }
+
+    public async Task<bool> RemoverVeiculoAsync(int id)
+    {
+        var veiculo = await BuscarEntidadePorIdAsync(id);
+
+        if (veiculo == null)
+        {
+            return false;
+        }
+        _context.Veiculos.Remove(veiculo);
+        await _context.SaveChangesAsync();
+        return true;
+    }
+
+
 }

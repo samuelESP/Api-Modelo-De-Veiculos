@@ -1,5 +1,6 @@
 using Domain.DTO;
 using Domain.Interface;
+using Domain.Models;
 using Domain.Servicos;
 using Dominios.Entidades;
 using Infra.Db;
@@ -97,6 +98,37 @@ app.MapGet("/Veiculo/ObterPorNome", async ([FromQuery] string nome, IVeiculo vei
         return Results.NotFound("Veículo não encontrado.");
     }
     return Results.Ok(veiculo);
+}).WithTags("Veículo");
+
+//Atualizar Veiculo
+app.MapPut("/Veiculo/Atualizar/{id}", async ([FromRoute] int id, [FromBody] VeiculoModel veiculoModel, IVeiculo veiculoService) =>
+{
+    var veiculoAtualizado = await veiculoService.AtualizarVeiculoAsync(id, veiculoModel);
+    if (veiculoAtualizado == null)
+    {
+        return Results.NotFound("Veículo não encontrado para atualização.");
+    }
+    return Results.Ok(veiculoAtualizado);
+}).WithTags("Veículo");
+
+//Criar Veiculo
+app.MapPost("/Veiculo/Criar", async ([FromBody] VeiculoModel veiculoModel, IVeiculo veiculoService) =>
+{
+    await veiculoService.CriarVeiculoAsync(veiculoModel);
+
+    return Results.Ok("Veículo criado com sucesso.");
+    
+}).WithTags("Veículo");
+
+//Remover Veiculo
+app.MapDelete("/Veiculo/Remover/{id}", async ([FromRoute] int id, IVeiculo veiculoService) =>
+{
+    var resultado = await veiculoService.RemoverVeiculoAsync(id);
+    if (!resultado)
+    {
+        return Results.NotFound("Veículo não encontrado para remoção.");
+    }
+    return Results.Ok("Veículo removido com sucesso.");
 }).WithTags("Veículo");
 #endregion
 
