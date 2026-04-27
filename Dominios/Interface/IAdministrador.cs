@@ -4,12 +4,10 @@ namespace Domain.Interface;
 
 public interface IAdministrador
 {
-    Task GerenciarUsuariosAsync();
+   Task<UsuarioDTO> ObterUsuarioPorIdAsync(int id);
+   
+    Task GerenciarUsuariosAsync(int id, AtualizarUsuarioAdministradorDTO atualizarUsuarioAdministradorDTO);
 
-    Task <List<UsuarioDTO>> ListarUsuariosAsync();
-
-    Task<UsuarioDTO> ObterUsuarioPorIdAsync(int id);
-
-    Task RemoverUsuarioAsync(int id);
+    Task<bool> RemoverUsuarioAsync(int id);
     
 }

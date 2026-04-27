@@ -3,6 +3,7 @@ using Domain.Interface;
 using Domain.Models;
 using Domain.Servicos;
 using Dominios.Entidades;
+using Dominios.Servicos;
 using Infra.Db;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.AspNetCore.Mvc;
@@ -24,7 +25,7 @@ builder.Services.AddDbContext<DbContexto>(options =>
 
 builder.Services.AddScoped<IUsuario, UsuarioServico>();
 builder.Services.AddScoped<IVeiculo, VeiculoServico>();
-
+builder.Services.AddScoped<IAdministrador, AdministradorServico>();
 //Swagger
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -131,6 +132,46 @@ app.MapDelete("/Veiculo/Remover/{id}", async ([FromRoute] int id, IVeiculo veicu
     return Results.Ok("Veículo removido com sucesso.");
 }).WithTags("Veículo");
 #endregion
+
+// ====================== Administrador ======================
+
+//Obter usuario por ID
+app.MapGet("/Administrador/ObterUsuarioPorId/{id}", async ([FromRoute] int id, IAdministrador administradorService) =>
+{
+    var usuario = await administradorService.ObterUsuarioPorIdAsync(id);
+    if (usuario == null)
+    {
+        return Results.NotFound("Usuário não encontrado.");
+    }
+    return Results.Ok(usuario);
+}).WithTags("Administrador");
+
+//Gerenciar usuario
+app.MapPut("/Administrador/GerenciarUsuarios/{id}", async ([FromRoute] int id, [FromBody] AtualizarUsuarioAdministradorDTO atualizarUsuarioAdministradorDTO, IAdministrador administradorService) =>
+{
+   try
+    {
+        await administradorService.GerenciarUsuariosAsync(id, atualizarUsuarioAdministradorDTO);
+        return Results.Ok("Usuário atualizado com sucesso.");
+    }
+    catch (KeyNotFoundException)
+    {
+        return Results.NotFound("Usuário não encontrado para atualização.");
+    }
+    catch (ArgumentException ex)
+    {
+        return Results.BadRequest(ex.Message);
+    }
+}).WithTags("Administrador");
+
+//Remover usuario
+app.MapDelete("/Administrador/RemoverUsuario/{id}", async ([FromRoute] int id, IAdministrador administradorService) =>
+{
+    await administradorService.RemoverUsuarioAsync(id);
+    
+    return Results.Ok("Usuário removido com sucesso.");
+
+}).WithTags("Administrador");
 
 app.UseSwagger();
 app.UseSwaggerUI();
