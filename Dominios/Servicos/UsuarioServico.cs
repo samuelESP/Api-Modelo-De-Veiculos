@@ -78,6 +78,18 @@ public class UsuarioServico : IUsuario
         }).ToList();
     }
 
+//Login
+    public async Task<Usuario> Login(LoginDto loginDto)  
+{
+    var usuario = await _context.Usuarios
+        .Where(a => a.Email == loginDto.Email && a.Senha == loginDto.Senha)
+        .FirstOrDefaultAsync();   
+
+    if (usuario == null)
+        return null;
+
+    return usuario;
+}
 #endregion
 
 }

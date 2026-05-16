@@ -1,3 +1,6 @@
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
 using Domain.DTO;
 using Domain.Interface;
 using Domain.Models;
@@ -5,13 +8,33 @@ using Domain.Servicos;
 using Dominios.Entidades;
 using Dominios.Servicos;
 using Infra.Db;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 
 
 #region Builder
 var builder = WebApplication.CreateBuilder(args);
+
+var key = builder.Configuration.GetSection("Jwt:Key").Value;
+
+if(string.IsNullOrEmpty(key)) key ="errado";
+
+builder.Services.AddAuthentication(option =>
+{
+    option.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    option.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+}).AddJwtBearer (option =>
+{
+    option.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateLifetime = true,
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key)),
+    };
+});
+builder.Services.AddAuthorization();
 
 // ====================== DbContext ======================
 #region DbContext
@@ -47,6 +70,33 @@ app.MapPost("/Usuario/Criar", async ([FromBody] LoginDto loginDto, IUsuario usua
     await usuarioService.CriarUsuarioAsync(loginDto);
 }).WithTags("Usuário");
 
+//Login
+app.MapPost("/Usuario/Login", async ([FromBody] LoginDto loginDto, IUsuario usuarioService) =>
+{
+    if (string.IsNullOrWhiteSpace(loginDto.Email) || string.IsNullOrWhiteSpace(loginDto.Senha))
+    {
+        return Results.BadRequest("Email e senha são obrigatórios.");
+    }
+
+    var usuario = await usuarioService.Login(loginDto);
+
+    if (usuario == null)
+    {
+        return Results.BadRequest("Email ou senha inválidos.");
+    }
+
+    // Gerar o Token JWT
+    var token = GerarTokenJWT(usuario);
+
+    return Results.Ok(new UsuarioLogado
+    {
+        Email = usuario.Email,
+        Perfil = usuario.Perfil,
+        Token = token
+    });
+})
+.WithTags("Usuário");
+
 //obeter por ID
 app.MapGet("/Usuario/ObterPorId/{id}", async ([FromRoute]int id, IUsuario usuarioService) =>
 {
@@ -56,14 +106,14 @@ app.MapGet("/Usuario/ObterPorId/{id}", async ([FromRoute]int id, IUsuario usuari
         return Results.NotFound("Usuário não encontrado.");
     }
     return Results.Ok(usuario);
-}).WithTags("Usuário");
+}).RequireAuthorization().WithTags("Usuário");
 
 //Listar todos
 app.MapGet("/Usuario/Listar", async (IUsuario usuarioService) =>
 {
     var usuarios = await usuarioService.ListarUsuariosAsync();
     return Results.Ok(usuarios);
-}).WithTags("Usuário");
+}).RequireAuthorization().WithTags("Usuário");
 
 #endregion
 
@@ -110,7 +160,7 @@ app.MapPut("/Veiculo/Atualizar/{id}", async ([FromRoute] int id, [FromBody] Veic
         return Results.NotFound("Veículo não encontrado para atualização.");
     }
     return Results.Ok(veiculoAtualizado);
-}).WithTags("Veículo");
+}).RequireAuthorization().WithTags("Veículo");
 
 //Criar Veiculo
 app.MapPost("/Veiculo/Criar", async ([FromBody] VeiculoModel veiculoModel, IVeiculo veiculoService) =>
@@ -119,7 +169,7 @@ app.MapPost("/Veiculo/Criar", async ([FromBody] VeiculoModel veiculoModel, IVeic
 
     return Results.Ok("Veículo criado com sucesso.");
     
-}).WithTags("Veículo");
+}).RequireAuthorization().WithTags("Veículo");
 
 //Remover Veiculo
 app.MapDelete("/Veiculo/Remover/{id}", async ([FromRoute] int id, IVeiculo veiculoService) =>
@@ -130,10 +180,32 @@ app.MapDelete("/Veiculo/Remover/{id}", async ([FromRoute] int id, IVeiculo veicu
         return Results.NotFound("Veículo não encontrado para remoção.");
     }
     return Results.Ok("Veículo removido com sucesso.");
-}).WithTags("Veículo");
+}).RequireAuthorization().WithTags("Veículo");
 #endregion
 
 // ====================== Administrador ======================
+string GerarTokenJWT(Usuario usuario)
+{
+    if(string.IsNullOrEmpty(key)) return string.Empty;
+
+    var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key));
+    var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
+    var claims = new List<Claim>()
+    {
+        new Claim("Email", usuario.Email),
+        new Claim("Perfil", usuario.Perfil),
+        new Claim(ClaimTypes.Role, usuario.Perfil),
+    };
+    var token = new JwtSecurityToken(
+        issuer: "veiculos_modelos",
+        audience: "veiculos_modelos",
+        claims : claims,
+        expires: DateTime.Now.AddDays(1),
+        signingCredentials: credentials
+    );
+    return new JwtSecurityTokenHandler().WriteToken(token);
+}
+
 
 //Obter usuario por ID
 app.MapGet("/Administrador/ObterUsuarioPorId/{id}", async ([FromRoute] int id, IAdministrador administradorService) =>
@@ -144,7 +216,7 @@ app.MapGet("/Administrador/ObterUsuarioPorId/{id}", async ([FromRoute] int id, I
         return Results.NotFound("Usuário não encontrado.");
     }
     return Results.Ok(usuario);
-}).WithTags("Administrador");
+}).RequireAuthorization().WithTags("Administrador");
 
 //Gerenciar usuario
 app.MapPut("/Administrador/GerenciarUsuarios/{id}", async ([FromRoute] int id, [FromBody] AtualizarUsuarioAdministradorDTO atualizarUsuarioAdministradorDTO, IAdministrador administradorService) =>
@@ -162,7 +234,7 @@ app.MapPut("/Administrador/GerenciarUsuarios/{id}", async ([FromRoute] int id, [
     {
         return Results.BadRequest(ex.Message);
     }
-}).WithTags("Administrador");
+}).RequireAuthorization().WithTags("Administrador");
 
 //Remover usuario
 app.MapDelete("/Administrador/RemoverUsuario/{id}", async ([FromRoute] int id, IAdministrador administradorService) =>
@@ -171,9 +243,12 @@ app.MapDelete("/Administrador/RemoverUsuario/{id}", async ([FromRoute] int id, I
     
     return Results.Ok("Usuário removido com sucesso.");
 
-}).WithTags("Administrador");
+}).RequireAuthorization().WithTags("Administrador");
 
 app.UseSwagger();
 app.UseSwaggerUI();
+
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.Run();
