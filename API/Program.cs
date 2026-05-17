@@ -9,10 +9,13 @@ using Dominios.Entidades;
 using Dominios.Servicos;
 using Infra.Db;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi;
+using Microsoft.OpenApi.Models;
 
 
 #region Builder
@@ -20,7 +23,9 @@ var builder = WebApplication.CreateBuilder(args);
 
 var key = builder.Configuration.GetSection("Jwt:Key").Value;
 
-if(string.IsNullOrEmpty(key)) key ="errado";
+if(string.IsNullOrEmpty(key)){
+    throw new InvalidOperationException("A chave JWT não pode ser nula ou vazia. Verifique a configuração.");
+}
 
 builder.Services.AddAuthentication(option =>
 {
@@ -30,7 +35,12 @@ builder.Services.AddAuthentication(option =>
 {
     option.TokenValidationParameters = new TokenValidationParameters
     {
+        ValidateIssuer = true,
+        ValidateAudience = true,
         ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        ValidIssuer = "veiculos_modelos",
+        ValidAudience = "veiculos_modelos",
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key)),
     };
 });
@@ -51,7 +61,35 @@ builder.Services.AddScoped<IVeiculo, VeiculoServico>();
 builder.Services.AddScoped<IAdministrador, AdministradorServico>();
 //Swagger
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        Scheme = "Bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "JWT Authorization header using the Bearer scheme."
+    });
+
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            new string[] { }
+        }
+    });
+});
+
+
 
 // Configuração para serializar enums como strings
 builder.Services.Configure<Microsoft.AspNetCore.Http.Json.JsonOptions>(options =>
@@ -60,6 +98,7 @@ builder.Services.Configure<Microsoft.AspNetCore.Http.Json.JsonOptions>(options =
 
 var app = builder.Build();
 #endregion
+
 
 // ====================== Usuário ======================
 #region Usuario
@@ -106,14 +145,14 @@ app.MapGet("/Usuario/ObterPorId/{id}", async ([FromRoute]int id, IUsuario usuari
         return Results.NotFound("Usuário não encontrado.");
     }
     return Results.Ok(usuario);
-}).RequireAuthorization().WithTags("Usuário");
+}).RequireAuthorization(new AuthorizeAttribute{Roles = "Adm,Editor"}).RequireAuthorization().WithTags("Usuário");
 
 //Listar todos
 app.MapGet("/Usuario/Listar", async (IUsuario usuarioService) =>
 {
     var usuarios = await usuarioService.ListarUsuariosAsync();
     return Results.Ok(usuarios);
-}).RequireAuthorization().WithTags("Usuário");
+}).RequireAuthorization(new AuthorizeAttribute{Roles = "Adm"}).RequireAuthorization().WithTags("Usuário");
 
 #endregion
 
@@ -160,7 +199,7 @@ app.MapPut("/Veiculo/Atualizar/{id}", async ([FromRoute] int id, [FromBody] Veic
         return Results.NotFound("Veículo não encontrado para atualização.");
     }
     return Results.Ok(veiculoAtualizado);
-}).RequireAuthorization().WithTags("Veículo");
+}).RequireAuthorization(new AuthorizeAttribute{Roles = "Adm,Editor"}).RequireAuthorization().WithTags("Veículo");
 
 //Criar Veiculo
 app.MapPost("/Veiculo/Criar", async ([FromBody] VeiculoModel veiculoModel, IVeiculo veiculoService) =>
@@ -169,7 +208,7 @@ app.MapPost("/Veiculo/Criar", async ([FromBody] VeiculoModel veiculoModel, IVeic
 
     return Results.Ok("Veículo criado com sucesso.");
     
-}).RequireAuthorization().WithTags("Veículo");
+}).RequireAuthorization(new AuthorizeAttribute{Roles = "Adm,Editor"}).RequireAuthorization().WithTags("Veículo");
 
 //Remover Veiculo
 app.MapDelete("/Veiculo/Remover/{id}", async ([FromRoute] int id, IVeiculo veiculoService) =>
@@ -180,10 +219,12 @@ app.MapDelete("/Veiculo/Remover/{id}", async ([FromRoute] int id, IVeiculo veicu
         return Results.NotFound("Veículo não encontrado para remoção.");
     }
     return Results.Ok("Veículo removido com sucesso.");
-}).RequireAuthorization().WithTags("Veículo");
+}).RequireAuthorization(new AuthorizeAttribute{Roles = "Adm,Editor"}).RequireAuthorization().WithTags("Veículo");
 #endregion
 
+
 // ====================== Administrador ======================
+#region Administrador
 string GerarTokenJWT(Usuario usuario)
 {
     if(string.IsNullOrEmpty(key)) return string.Empty;
@@ -216,7 +257,7 @@ app.MapGet("/Administrador/ObterUsuarioPorId/{id}", async ([FromRoute] int id, I
         return Results.NotFound("Usuário não encontrado.");
     }
     return Results.Ok(usuario);
-}).RequireAuthorization().WithTags("Administrador");
+}).RequireAuthorization(new AuthorizeAttribute{Roles = "Adm"}).RequireAuthorization().WithTags("Administrador");
 
 //Gerenciar usuario
 app.MapPut("/Administrador/GerenciarUsuarios/{id}", async ([FromRoute] int id, [FromBody] AtualizarUsuarioAdministradorDTO atualizarUsuarioAdministradorDTO, IAdministrador administradorService) =>
@@ -234,7 +275,7 @@ app.MapPut("/Administrador/GerenciarUsuarios/{id}", async ([FromRoute] int id, [
     {
         return Results.BadRequest(ex.Message);
     }
-}).RequireAuthorization().WithTags("Administrador");
+}).RequireAuthorization(new AuthorizeAttribute{Roles = "Adm"}).RequireAuthorization().WithTags("Administrador");
 
 //Remover usuario
 app.MapDelete("/Administrador/RemoverUsuario/{id}", async ([FromRoute] int id, IAdministrador administradorService) =>
@@ -243,7 +284,10 @@ app.MapDelete("/Administrador/RemoverUsuario/{id}", async ([FromRoute] int id, I
     
     return Results.Ok("Usuário removido com sucesso.");
 
-}).RequireAuthorization().WithTags("Administrador");
+}).RequireAuthorization(new AuthorizeAttribute{Roles = "Adm"}).RequireAuthorization().WithTags("Administrador");
+
+#endregion
+
 
 app.UseSwagger();
 app.UseSwaggerUI();
